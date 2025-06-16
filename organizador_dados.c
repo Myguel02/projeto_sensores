@@ -16,11 +16,11 @@ typedef struct {
 sensor_container sensores_containers[MAX_SENSORS];
 int num_sensores_ativos = 0;
 
-int comparar_leituras(const void *a, const void *b) {
+int comparar_leituras_decrescente(const void *a, const void *b) {
     const leitura *leitura_a = (const leitura *)a;
     const leitura *leitura_b = (const leitura *)b;
-    if (leitura_a->timestamp < leitura_b->timestamp) return -1;
-    if (leitura_a->timestamp > leitura_b->timestamp) return 1;
+    if (leitura_a->timestamp > leitura_b->timestamp) return -1;
+    if (leitura_a->timestamp < leitura_b->timestamp) return 1;
     return 0;
 }
 
@@ -38,8 +38,8 @@ data_type inferir_tipo_dado(const char *valor_str) {
     }
 
     char lower_val[MAX_VALUE_STRING_LENGTH];
-    int len = strlen(valor_str);
-    for(int i = 0; i < len && i < MAX_VALUE_STRING_LENGTH - 1; i++) {
+    size_t len = strlen(valor_str); // Corrigido para size_t
+    for(size_t i = 0; i < len && i < MAX_VALUE_STRING_LENGTH - 1; i++) { // Corrigido para size_t
         lower_val[i] = tolower((unsigned char)valor_str[i]);
     }
     lower_val[len < MAX_VALUE_STRING_LENGTH ? len : MAX_VALUE_STRING_LENGTH - 1] = '\0';
@@ -96,13 +96,12 @@ int main(int argc, char *argv[]) {
     char valor_str[MAX_VALUE_STRING_LENGTH];
 
     while (fgets(linha, sizeof(linha), arquivo_entrada) != NULL) {
-        linha[strcspn(linha, "\n")] = '\0';
+        linha[strcspn(linha, "\n")] = '\0'; 
         
         char *ptr_linha = linha;
         char *end_of_timestamp = NULL;
         char *end_of_id_sensor = NULL;
 
-        // Tenta ler o timestamp
         timestamp = strtoll(ptr_linha, &end_of_timestamp, 10);
         if (end_of_timestamp == ptr_linha || (*end_of_timestamp != '\0' && !isspace((unsigned char)*end_of_timestamp))) {
             fprintf(stderr, "aviso: linha com formato de timestamp invalido: '%s'\n", linha);
@@ -110,35 +109,31 @@ int main(int argc, char *argv[]) {
         }
         ptr_linha = end_of_timestamp;
 
-        // Pula espaços após o timestamp
         while (*ptr_linha != '\0' && isspace((unsigned char)*ptr_linha)) {
             ptr_linha++;
         }
 
-        // Tenta ler o id_sensor
         end_of_id_sensor = ptr_linha;
         while (*end_of_id_sensor != '\0' && !isspace((unsigned char)*end_of_id_sensor)) {
             end_of_id_sensor++;
         }
-        if (end_of_id_sensor == ptr_linha) { // id_sensor ausente
+        if (end_of_id_sensor == ptr_linha) {
             fprintf(stderr, "aviso: linha com id_sensor ausente: '%s'\n", linha);
             continue;
         }
         size_t id_len = end_of_id_sensor - ptr_linha;
         if (id_len >= MAX_SENSOR_ID_LENGTH) {
-             id_len = MAX_SENSOR_ID_LENGTH - 1; // Trunca se for muito longo
+            id_len = MAX_SENSOR_ID_LENGTH - 1;
         }
         strncpy(id_sensor, ptr_linha, id_len);
         id_sensor[id_len] = '\0';
         
         ptr_linha = end_of_id_sensor;
 
-        // Pula espaços após o id_sensor
         while (*ptr_linha != '\0' && isspace((unsigned char)*ptr_linha)) {
             ptr_linha++;
         }
 
-        // O restante da linha é o valor_str
         if (*ptr_linha == '\0') {
             fprintf(stderr, "aviso: linha com valor ausente: '%s'\n", linha);
             continue;
@@ -146,8 +141,7 @@ int main(int argc, char *argv[]) {
         strncpy(valor_str, ptr_linha, MAX_VALUE_STRING_LENGTH - 1);
         valor_str[MAX_VALUE_STRING_LENGTH - 1] = '\0';
         
-        // Remover espaços em branco no final do valor_str
-        int val_len = strlen(valor_str);
+        size_t val_len = strlen(valor_str); // Corrigido para size_t
         while (val_len > 0 && isspace((unsigned char)valor_str[val_len - 1])) {
             valor_str[val_len - 1] = '\0';
             val_len--;
@@ -202,7 +196,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        qsort(current_sensor->leituras, current_sensor->contagem, sizeof(leitura), comparar_leituras);
+        // Usa a função de comparação para ordem decrescente
+        qsort(current_sensor->leituras, current_sensor->contagem, sizeof(leitura), comparar_leituras_decrescente);
 
         for (int j = 0; j < current_sensor->contagem; j++) {
             fprintf(arquivo_saida, "%lld %s %s\n",
@@ -211,7 +206,7 @@ int main(int argc, char *argv[]) {
                     current_sensor->leituras[j].valor_str);
         }
         fclose(arquivo_saida);
-        printf("arquivo '%s' gerado com %d leituras e ordenado com sucesso.\n", current_sensor->contagem, nome_arquivo_saida); // Corrigido a ordem dos argumentos aqui
+        printf("arquivo '%s' gerado com %d leituras e ordenado decrescentemente com sucesso.\n", current_sensor->id_sensor, current_sensor->contagem);
     }
 
     for (int i = 0; i < num_sensores_ativos; i++) {

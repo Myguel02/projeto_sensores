@@ -4,6 +4,7 @@
 #include <string.h>
 
 static bool is_valid_date_basic(int dia, int mes, int ano) {
+    (void)ano;
     if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return false;
     return true;
 }
