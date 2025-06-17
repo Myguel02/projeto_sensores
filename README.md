@@ -17,17 +17,17 @@ Para compilar os programas, você precisará ter o compilador GCC (GNU Compiler 
 
 **É crucial incluir o `utils.c` na compilação de cada programa que utiliza suas funções.**
 
-## 1 Compilar o programa 1: òrganizador_dados`
+#### 1 Compilar o programa 1: `òrganizador_dados`
 
-``bash 
+````bash 
 & "C:\Users\mygue\OneDrive\Documentos\MinGW\bin\gcc.EXE" -Wall -Wextra -g3 "organizador_dados.c" "utils.c" -o "output\organizador_dados.exe" -lm
 
 ### 2. Compilar o programa 2: `consulta_instante` 
 
-``bash
+```bash
 & "C:\Users\mygue\OneDrive\Documentos\MinGW\bin\gcc.EXE" -Wall -Wextra -g3 "consulta_instante2.c" "utils.c" -o "output\consulta_instante2.exe" -lm
 
-
+```bash
 ### 3. Compilar o Programa 3: `gerar_arquivo_teste.exe`
 
 ``bash
