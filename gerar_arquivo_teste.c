@@ -6,128 +6,142 @@
 #include <ctype.h>
 
 #include "common.h"
+#include "utils.h"
 
-data_type string_to_data_type(const char* type_str) {
-    char lower_type[50];
-    size_t len = strlen(type_str);
-    for (size_t i = 0; i < len && i < sizeof(lower_type) - 1; i++) {
-        lower_type[i] = tolower((unsigned char)type_str[i]);
+#define NUM_LEITURAS_POR_SENSOR 2000
+// #define MAX_SENSORS 10 // Removido, já definido em common.h
+
+data_type string_para_tipo_dado(const char *tipo_str) {
+    char lower_str[50];
+    size_t len = strlen(tipo_str);
+    for (size_t i = 0; i < len && i < sizeof(lower_str) - 1; i++) {
+        lower_str[i] = tolower((unsigned char)tipo_str[i]);
     }
-    lower_type[len < sizeof(lower_type) ? len : sizeof(lower_type) - 1] = '\0';
-    if (strcmp(lower_type, "int") == 0) return TYPE_INT;
-    if (strcmp(lower_type, "float") == 0) return TYPE_FLOAT;
-    if (strcmp(lower_type, "bool") == 0) return TYPE_BOOL;
-    if (strcmp(lower_type, "string") == 0) return TYPE_STRING;
-    return TYPE_STRING;
+    lower_str[len < sizeof(lower_str) ? len : sizeof(lower_str) - 1] = '\0';
+
+    if (strcmp(lower_str, "conj_z") == 0) return TYPE_INT;
+    if (strcmp(lower_str, "conj_q") == 0) return TYPE_FLOAT;
+    if (strcmp(lower_str, "texto") == 0) return TYPE_STRING;
+    if (strcmp(lower_str, "binario") == 0) return TYPE_BOOL;
+    return TYPE_UNKNOWN;
+}
+
+void gerar_valor_aleatorio(data_type tipo, char *buffer, size_t buffer_size) {
+    switch (tipo) {
+        case TYPE_INT:
+            snprintf(buffer, buffer_size, "%lld", (long long)(rand() % 100000 - 50000));
+            break;
+        case TYPE_FLOAT:
+            snprintf(buffer, buffer_size, "%.2f", (float)(rand() % 100000) / 100.0 - 500.0);
+            break;
+        case TYPE_STRING: {
+            const char *palavras[] = {"medidaA", "dadoX", "valorY", "estadoZ", "temp_alta", "temp_baixa", "ok", "alerta"};
+            int num_palavras = sizeof(palavras) / sizeof(palavras[0]);
+            snprintf(buffer, buffer_size, "%s", palavras[rand() % num_palavras]);
+            break;
+        }
+        case TYPE_BOOL:
+            snprintf(buffer, buffer_size, "%s", (rand() % 2 == 0) ? "true" : "false");
+            break;
+        default:
+            snprintf(buffer, buffer_size, "INVALID_TYPE");
+            break;
+    }
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 5 || (argc - 3) % 2 != 0) {
-        printf("uso: %s \"<data_inicio_DD/MM/YYYY HH:MM:SS>\" \"<data_fim_DD/MM/YYYY HH:MM:SS>\" <sensor1_nome> <sensor1_tipo> [<sensor2_nome> <sensor2_tipo> ...]\n", argv[0]);
-        printf("exemplo: %s \"01/01/2023 00:00:00\" \"31/12/2023 23:59:59\" temp int umidade float porta_entrada bool alerta string\n", argv[0]);
+    if (argc < 4 || (argc - 3) % 2 != 0) {
+        fprintf(stderr, "Uso: %s \"<data_inicio DD/MM/YYYY HH:MM:SS>\" \"<data_fim DD/MM/YYYY HH:MM:SS>\" <id_sensor1>:<tipo1> [<id_sensor2>:<tipo2> ...]\n", argv[0]);
+        fprintf(stderr, "Tipos de dados validos: CONJ_Z (inteiro), CONJ_Q (float), TEXTO (string), BINARIO (booleano).\n");
         return 1;
     }
 
-    srand((unsigned int)time(NULL));
+    int d_ini, m_ini, a_ini, h_ini, min_ini, s_ini;
+    int d_fim, m_fim, a_fim, h_fim, min_fim, s_fim;
 
-    const char *start_datetime_str = argv[1];
-    const char *end_datetime_str = argv[2];
-
-    int dia, mes, ano, hora, min, seg;
-    
-    if (sscanf(start_datetime_str, "%d/%d/%d %d:%d:%d", &dia, &mes, &ano, &hora, &min, &seg) != 6) {
-        fprintf(stderr, "erro: formato de data e hora de inicio invalido. Use DD/MM/YYYY HH:MM:SS\n");
+    if (sscanf(argv[1], "%d/%d/%d %d:%d:%d", &d_ini, &m_ini, &a_ini, &h_ini, &min_ini, &s_ini) != 6) {
+        fprintf(stderr, "Erro: Formato da data e hora de inicio invalido. Use DD/MM/YYYY HH:MM:SS\n");
         return 1;
     }
-    long long start_timestamp = (long long)converter_para_timestamp(dia, mes, ano, hora, min, seg);
-    if (start_timestamp == (long long)-1) {
-        fprintf(stderr, "erro: data e hora de inicio fornecida eh invalida.\n");
+    if (sscanf(argv[2], "%d/%d/%d %d:%d:%d", &d_fim, &m_fim, &a_fim, &h_fim, &min_fim, &s_fim) != 6) {
+        fprintf(stderr, "Erro: Formato da data e hora de fim invalido. Use DD/MM/YYYY HH:MM:SS\n");
         return 1;
     }
 
-    if (sscanf(end_datetime_str, "%d/%d/%d %d:%d:%d", &dia, &mes, &ano, &hora, &min, &seg) != 6) {
-        fprintf(stderr, "erro: formato de data e hora de fim invalido. Use DD/MM/YYYY HH:MM:SS\n");
-        return 1;
-    }
-    long long end_timestamp = (long long)converter_para_timestamp(dia, mes, ano, hora, min, seg);
-    if (end_timestamp == (long long)-1) {
-        fprintf(stderr, "erro: data e hora de fim fornecida eh invalida.\n");
-        return 1;
-    }
+    long long timestamp_inicio = converter_para_timestamp(d_ini, m_ini, a_ini, h_ini, min_ini, s_ini);
+    long long timestamp_fim = converter_para_timestamp(d_fim, m_fim, a_fim, h_fim, min_fim, s_fim);
 
-    if (start_timestamp >= end_timestamp) {
-        fprintf(stderr, "erro: data e hora de inicio deve ser anterior a data e hora de fim.\n");
+    if (timestamp_inicio == -1 || timestamp_fim == -1) {
+        fprintf(stderr, "Erro: Uma das datas/horas fornecidas eh invalida ou fora do range de representacao.\n");
+        return 1;
+    }
+    if (timestamp_inicio >= timestamp_fim) {
+        fprintf(stderr, "Erro: A data/hora de inicio deve ser anterior a data/hora de fim.\n");
         return 1;
     }
 
-    FILE *output_file = fopen("dados_gerados.txt", "w");
-    if (output_file == NULL) {
-        perror("erro ao criar o arquivo de saida 'dados_gerados.txt'");
-        return 1;
-    }
+    SensorInfo sensores[MAX_SENSORS]; // MAX_SENSORS para o array
+    int num_sensores = 0;
 
-    printf("Gerando dados de teste...\n");
-
-    long long total_duration = end_timestamp - start_timestamp;
-    const int NUM_LEITURAS_POR_SENSOR = 2000;
-
-    for (int i = 3; i < argc; i += 2) {
-        const char *sensor_name = argv[i];
-        const char *sensor_type_str = argv[i+1];
-        data_type current_data_type = string_to_data_type(sensor_type_str);
-
-        if (strlen(sensor_name) >= MAX_SENSOR_ID_LENGTH) {
-            fprintf(stderr, "aviso: ID do sensor '%s' muito longo, sera truncado.\n", sensor_name);
+    for (int i = 3; i < argc; i++) {
+        if (num_sensores >= MAX_SENSORS) { // MAX_SENSORS é 100 de common.h
+            fprintf(stderr, "Aviso: Limite de %d sensores atingido. Ignorando sensores adicionais.\n", MAX_SENSORS);
+            break;
         }
 
-        printf("  Gerando %d leituras para o sensor '%s' (Tipo: %s) em ordem decrescente...\n", NUM_LEITURAS_POR_SENSOR, sensor_name, sensor_type_str);
-
-        long long step_interval = (total_duration / NUM_LEITURAS_POR_SENSOR);
-        if (step_interval == 0 && total_duration > 0) {
-            step_interval = 1; 
+        char *arg = argv[i];
+        char *colon_pos = strchr(arg, ':');
+        if (!colon_pos) {
+            fprintf(stderr, "Erro: Formato invalido para sensor. Use <id_sensor>:<tipo_dado>. Argumento: '%s'\n", arg);
+            return 1;
         }
 
-        for (int j = 0; j < NUM_LEITURAS_POR_SENSOR; j++) {
-            long long current_timestamp;
-            if (NUM_LEITURAS_POR_SENSOR - 1 - j == 0) {
-                 current_timestamp = start_timestamp;
-            } else {
-                 current_timestamp = end_timestamp - (j * step_interval);
-                 if (step_interval > 0) {
-                     current_timestamp -= (rand() % step_interval);
-                 }
-                 if (current_timestamp < start_timestamp) {
-                     current_timestamp = start_timestamp;
-                 }
-            }
-
-            char value_buffer[MAX_VALUE_STRING_LENGTH];
-            value_buffer[0] = '\0';
-
-            switch (current_data_type) {
-                case TYPE_INT:
-                    snprintf(value_buffer, sizeof(value_buffer), "%d", rand() % 1000);
-                    break;
-                case TYPE_FLOAT:
-                    snprintf(value_buffer, sizeof(value_buffer), "%.2f", (float)rand() / RAND_MAX * 100.0);
-                    break;
-                case TYPE_BOOL:
-                    snprintf(value_buffer, sizeof(value_buffer), "%s", (rand() % 2 == 0) ? "true" : "false");
-                    break;
-                case TYPE_STRING:
-                    snprintf(value_buffer, sizeof(value_buffer), "valor_%d", rand() % 1000);
-                    break;
-                default:
-                    snprintf(value_buffer, sizeof(value_buffer), "UNKNOWN_VALUE");
-                    break;
-            }
-
-            fprintf(output_file, "%lld,%s,%s\n", current_timestamp, sensor_name, value_buffer);
+        size_t id_len = colon_pos - arg;
+        if (id_len == 0 || id_len >= MAX_SENSOR_ID_LENGTH) {
+            fprintf(stderr, "Erro: ID do sensor muito longo ou vazio. Maximo %d caracteres. Argumento: '%s'\n", MAX_SENSOR_ID_LENGTH - 1, arg);
+            return 1;
         }
+        strncpy(sensores[num_sensores].id_sensor, arg, id_len);
+        sensores[num_sensores].id_sensor[id_len] = '\0';
+
+        const char *tipo_str = colon_pos + 1;
+        sensores[num_sensores].tipo_dado = string_para_tipo_dado(tipo_str);
+
+        if (sensores[num_sensores].tipo_dado == TYPE_UNKNOWN) {
+            fprintf(stderr, "Erro: Tipo de dado invalido para o sensor '%s'. Tipo fornecido: '%s'\n", sensores[num_sensores].id_sensor, tipo_str);
+            fprintf(stderr, "Tipos de dados validos: CONJ_Z, CONJ_Q, TEXTO, BINARIO.\n");
+            return 1;
+        }
+        num_sensores++;
     }
 
-    fclose(output_file);
-    printf("Arquivo 'dados_gerados.txt' criado com sucesso com timestamps decrescentes!\n");
+    if (num_sensores == 0) {
+        fprintf(stderr, "Erro: Nenhuma informacao de sensor valida foi fornecida.\n");
+        return 1;
+    }
+
+    FILE *f_out = fopen("dados_brutos.txt", "w");
+    if (!f_out) {
+        perror("Erro ao abrir 'dados_brutos.txt' para escrita");
+        return 1;
+    }
+
+    fprintf(f_out, "id_sensor;timestamp;valor\n");
+
+    srand((unsigned int)time(NULL)); // Inicializa o gerador de números aleatórios uma vez no main
+
+    long long current_timestamp = timestamp_inicio;
+    while (current_timestamp <= timestamp_fim) {
+        for (int i = 0; i < num_sensores; i++) {
+            char valor_str[MAX_SENSOR_ID_LENGTH]; // Ajustado o tamanho do buffer para o valor
+            gerar_valor_aleatorio(sensores[i].tipo_dado, valor_str, sizeof(valor_str));
+            fprintf(f_out, "%s;%lld;%s\n", sensores[i].id_sensor, current_timestamp, valor_str);
+        }
+        current_timestamp++; // Incrementa o timestamp para a próxima "leitura"
+    }
+
+    fclose(f_out);
+    printf("Arquivo 'dados_brutos.txt' gerado com sucesso.\n");
 
     return 0;
 }

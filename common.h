@@ -2,28 +2,40 @@
 #define COMMON_H
 
 #include <time.h>
-#include <stdbool.h>
 
-#define MAX_SENSOR_ID_LENGTH 50
-#define MAX_VALUE_STRING_LENGTH 200
-#define MAX_LINE_LENGTH 512
 #define MAX_SENSORS 100
+#define MAX_SAMPLES 100000
+#define MAX_FILENAME_LENGTH 256
+#define MAX_LINE_LENGTH 512
+#define MAX_SENSOR_NAME_LENGTH 50
+#define MAX_UNIT_LENGTH 10
+#define MAX_SENSOR_ID_LENGTH 50
 
 typedef enum {
     TYPE_INT,
-    TYPE_BOOL,
     TYPE_FLOAT,
-    TYPE_STRING
+    TYPE_STRING,
+    TYPE_BOOL,
+    TYPE_UNKNOWN
 } data_type;
 
 typedef struct {
+    int id;
+    char nome[MAX_SENSOR_NAME_LENGTH];
+    char unidade[MAX_UNIT_LENGTH];
+    data_type tipo_dado;
+} Sensor;
+
+typedef struct {
     long long timestamp;
+    int sensor_id;
+    char valor[MAX_SENSOR_NAME_LENGTH];
+} Amostra;
+
+typedef struct {
     char id_sensor[MAX_SENSOR_ID_LENGTH];
-    char valor_str[MAX_VALUE_STRING_LENGTH];
-    data_type tipo;
-} leitura;
+    data_type tipo_dado;
+} SensorInfo;
 
-time_t converter_para_timestamp(int dia, int mes, int ano, int hora, int min, int seg);
-void timestamp_para_string(long long timestamp, char *buffer, size_t buffer_size);
 
-#endif
+#endif 
