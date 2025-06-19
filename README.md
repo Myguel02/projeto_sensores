@@ -13,21 +13,8 @@ Este projeto em C consiste em três programas interdependentes para a geração,
 
 ## Como Compilar os Programas
 
-Para compilar os programas, você precisará ter o compilador GCC (GNU Compiler Collection) configurado no seu ambiente. Os comandos abaixo são formatados para serem executados em um terminal PowerShell no Windows, assumindo que você está no diretório raiz do projeto (`atividade n2`).
+Para compilar os programas, você precisará ter o compilador GCC (GNU Compiler Collection) configurado no seu ambiente. Os comandos abaixo são formatados para serem executados em um terminal PowerShell no Windows, assumindo que você está no diretório raiz do projeto.
 
 **É crucial incluir o `utils.c` na compilação de cada programa que utiliza suas funções.**
 
-#### 1 Compilar o programa 1: `òrganizador_dados`
 
-*```` bash
-& "C:\Users\mygue\OneDrive\Documentos\MinGW\bin\gcc.EXE" -Wall -Wextra -g3 "organizador_dados.c" "utils.c" -o "output\organizador_dados.exe" -lm
-
-### 2. Compilar o programa 2: `consulta_instante` 
-
-
-& "C:\Users\mygue\OneDrive\Documentos\MinGW\bin\gcc.EXE" -Wall -Wextra -g3 "consulta_instante2.c" "utils.c" -o "output\consulta_instante2.exe" -lm
-
-### 3. Compilar o Programa 3: `gerar_arquivo_teste.exe`
-
-
-& "C:\Users\mygue\OneDrive\Documentos\MinGW\bin\gcc.EXE" -Wall -Wextra -g3 "gerar_arquivo_teste.c" "utils.c" -o "output\gerar_arquivo_teste.exe" -lm
